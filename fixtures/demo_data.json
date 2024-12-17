@@ -1,0 +1,56 @@
+[
+    {
+        "model": "pos.category",
+        "pk": 1,
+        "fields": {
+            "name": "Boissons",
+            "description": "Boissons alcoolisées et non alcoolisées",
+            "active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "pos.category",
+        "pk": 2,
+        "fields": {
+            "name": "Plats",
+            "description": "Plats principaux",
+            "active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "pos.product",
+        "pk": 1,
+        "fields": {
+            "name": "Coca-Cola",
+            "category": 1,
+            "description": "Canette 33cl",
+            "price": "2.50",
+            "cost": "1.00",
+            "stock_quantity": 100,
+            "minimum_stock": 20,
+            "active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "pos.product",
+        "pk": 2,
+        "fields": {
+            "name": "Pizza Margherita",
+            "category": 2,
+            "description": "Pizza traditionnelle",
+            "price": "12.00",
+            "cost": "4.00",
+            "stock_quantity": 50,
+            "minimum_stock": 10,
+            "active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    }
+]
