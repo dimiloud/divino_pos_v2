@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Informations produit -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ product.reference }} - {{ product.name }}</h5>
+                <div>
+                    <a href="{% url 'inventory:product-update' product.pk %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-edit"></i> Modifier
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" 
+                             class="img-fluid rounded">
+                        {% else %}
+                        <div class="placeholder-image text-center p-5 bg-light rounded">
+                            <i class="fas fa-tshirt fa-4x text-muted"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <dl class="row">
+                            <dt class="col-sm-4">Catégorie</dt>
+                            <dd class="col-sm-8">{{ product.category.name }}</dd>
+
+                            <dt class="col-sm-4">Collection</dt>
+                            <dd class="col-sm-8">{{ product.collection }}</dd>
+
+                            <dt class="col-sm-4">Prix de base</dt>
+                            <dd class="col-sm-8">{{ product.base_price }} €</dd>
+
+                            <dt class="col-sm-4">TVA</dt>
+                            <dd class="col-sm-8">{{ product.tax_rate }}%</dd>
+
+                            <dt class="col-sm-4">Matériau</dt>
+                            <dd class="col-sm-8">{{ product.material }}</dd>
+                        </dl>
+
+                        <div class="mt-3">
+                            <h6>Description</h6>
+                            <p>{{ product.description }}</p>
+                        </div>
+
+                        <div class="mt-3">
+                            <h6>Instructions d'entretien</h6>
+                            <p>{{ product.care_instructions }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Variantes -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Variantes</h5>
+                <a href="{% url 'inventory:variant-create' product.pk %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Nouvelle variante
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Taille</th>
+                                <th>Couleur</th>
+                                <th>Stock</th>
+                                <th>Stock minimum</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for variant in product.variants.all %}
+                            <tr>
+                                <td>{{ variant.sku }}</td>
+                                <td>{{ variant.size.name }}</td>
+                                <td>
+                                    <span class="color-dot" style="background-color: {{ variant.color.code }}"></span>
+                                    {{ variant.color.name }}
+                                </td>
+                                <td>
+                                    <span class="badge {% if variant.stock_quantity <= variant.minimum_stock %}bg-danger
+                                                 {% elif variant.stock_quantity <= variant.minimum_stock|add:5 %}bg-warning
+                                                 {% else %}bg-success{% endif %}">
+                                        {{ variant.stock_quantity }}
+                                    </span>
+                                </td>
+                                <td>{{ variant.minimum_stock }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-info adjust-stock" 
+                                                data-variant-id="{{ variant.id }}"
+                                                data-current-stock="{{ variant.stock_quantity }}">
+                                            <i class="fas fa-boxes"></i>
+                                        </button>
+                                        <a href="{% url 'inventory:variant-update' variant.pk %}" 
+                                           class="btn btn-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-danger delete-variant" 
+                                                data-variant-id="{{ variant.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">Aucune variante disponible</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historique des mouvements -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Historique des mouvements</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for movement in movements %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if movement.movement_type == 'in' %}bg-success
+                                                   {% elif movement.movement_type == 'out' %}bg-danger
+                                                   {% else %}bg-info{% endif %}"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-heading">
+                                {{ movement.get_movement_type_display }} - 
+                                {{ movement.quantity }} unités
+                            </div>
+                            <div class="timeline-body">
+                                {{ movement.description }}
+                            </div>
+                            <div class="timeline-footer text-muted">
+                                {{ movement.created_at|date:"d/m/Y H:i" }}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-center text-muted">Aucun mouvement enregistré</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'ajustement de stock -->
+<div class="modal fade" id="stockAdjustmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ajuster le stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stockAdjustmentForm">
+                    <input type="hidden" name="variant_id" id="variantId">
+                    <div class="mb-3">
+                        <label class="form-label">Stock actuel</label>
+                        <input type="number" id="currentStock" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ajustement</label>
+                        <input type="number" name="adjustment" class="form-control" required>
+                        <div class="form-text">Utilisez des nombres négatifs pour diminuer le stock</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Motif</label>
+                        <textarea name="reason" class="form-control" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="saveStockAdjustment">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.color-dot {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-item {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 15px;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    flex-grow: 1;
+}
+
+.timeline-heading {
+    font-weight: bold;
+}
+
+.timeline-footer {
+    font-size: 0.85em;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Code JavaScript pour la gestion des ajustements de stock
+$(document).ready(function() {
+    $('.adjust-stock').click(function() {
+        const variantId = $(this).data('variant-id');
+        const currentStock = $(this).data('current-stock');
+        
+        $('#variantId').val(variantId);
+        $('#currentStock').val(currentStock);
+        
+        $('#stockAdjustmentModal').modal('show');
+    });
+
+    $('#saveStockAdjustment').click(function() {
+        const form = $('#stockAdjustmentForm');
+        const data = {
+            variant_id: form.find('[name=variant_id]').val(),
+            adjustment: form.find('[name=adjustment]').val(),
+            reason: form.find('[name=reason]').val()
+        };
+
+        $.ajax({
+            url: '{% url "inventory:adjust-stock" %}',
+            method: 'POST',
+            data: data,
+            success: function(response) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Erreur lors de l\'ajustement du stock');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
