@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Analyse des retours{% endblock %}
+
+{% block content %}
+<!-- Statistiques générales -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6 class="card-title">Total des retours</h6>
+                <h3>{{ stats.total_returns }}</h3>
+                <small>Sur la période sélectionnée</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6 class="card-title">Taux d'approbation</h6>
+                <h3>{{ stats.approval_rate|floatformat:1 }}%</h3>
+                <small>{{ stats.approved_returns }} retours approuvés</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6 class="card-title">Taux d'échange</h6>
+                <h3>{{ stats.exchange_rate|floatformat:1 }}%</h3>
+                <small>vs remboursements</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h6 class="card-title">Montant moyen</h6>
+                <h3>{{ stats.avg_refund_amount|floatformat:2 }} €</h3>
+                <small>par retour</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques -->
+<div class="row">
+    <!-- Tendance des retours -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Tendance des retours</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="returnTrendChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Motifs de retour -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Motifs de retour</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="returnReasonsChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Taux de retour par produit -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Produits les plus retournés</h5>
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" 
+                        data-bs-target="#productReturnModal">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Taux de retour</th>
+                                <th>Total retours</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in top_returned_products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-danger" 
+                                             role="progressbar" 
+                                             style="width: {{ product.return_rate }}%"
+                                             aria-valuenow="{{ product.return_rate }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ product.return_rate }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ product.total_returns }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Motifs d'échange -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Analyse des échanges de taille</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>De</th>
+                                <th>Vers</th>
+                                <th>Fréquence</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pattern in size_exchange_patterns %}
+                            <tr>
+                                <td>{{ pattern.original_size }}</td>
+                                <td>{{ pattern.new_size }}</td>
+                                <td>{{ pattern.count }}</td>
+                                <td>{{ pattern.percentage|floatformat:1 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Données pour les graphiques
+const trendData = {{ trend_data|safe }};
+const reasonsData = {{ reasons_data|safe }};
+
+// Graphique des tendances
+new Chart(document.getElementById('returnTrendChart'), {
+    type: 'line',
+    data: {
+        labels: trendData.labels,
+        datasets: [{
+            label: 'Retours',
+            data: trendData.returns,
+            borderColor: 'rgb(75, 192, 192)',
+            fill: false
+        }, {
+            label: 'Échanges',
+            data: trendData.exchanges,
+            borderColor: 'rgb(153, 102, 255)',
+            fill: false
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Graphique des motifs
+new Chart(document.getElementById('returnReasonsChart'), {
+    type: 'doughnut',
+    data: {
+        labels: reasonsData.labels,
+        datasets: [{
+            data: reasonsData.values,
+            backgroundColor: [
+                'rgb(255, 99, 132)',
+                'rgb(54, 162, 235)',
+                'rgb(255, 206, 86)',
+                'rgb(75, 192, 192)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+</script>
+{% endblock %}
