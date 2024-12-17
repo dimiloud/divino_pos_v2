@@ -2,6 +2,14 @@ from .base import *
 
 DEBUG = True
 
+# Base de données SQLite pour le développement
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
 INSTALLED_APPS += ['debug_toolbar']
 
 # Debug toolbar settings
