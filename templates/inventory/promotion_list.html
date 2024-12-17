@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestion des promotions{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Promotions</h5>
+        <a href="{% url 'inventory:promotion-create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouvelle promotion
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Type</th>
+                        <th>Valeur</th>
+                        <th>Date début</th>
+                        <th>Date fin</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for promo in promotions %}
+                    <tr>
+                        <td>{{ promo.name }}</td>
+                        <td>{{ promo.get_discount_type_display }}</td>
+                        <td>
+                            {% if promo.discount_type == 'percentage' %}
+                                {{ promo.value }}%
+                            {% else %}
+                                {{ promo.value }} €
+                            {% endif %}
+                        </td>
+                        <td>{{ promo.start_date|date:"d/m/Y" }}</td>
+                        <td>{{ promo.end_date|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if promo.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'inventory:promotion-edit' promo.id %}" class="btn btn-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-danger delete-promotion" data-id="{{ promo.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('.delete-promotion').click(function() {
+        const promoId = $(this).data('id');
+        if (confirm('Êtes-vous sûr de vouloir supprimer cette promotion ?')) {
+            $.ajax({
+                url: `/api/promotions/${promoId}/`,
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function() {
+                    location.reload();
+                },
+                error: function() {
+                    alert('Erreur lors de la suppression');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

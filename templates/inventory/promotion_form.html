@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %} promotion
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    {% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %} promotion
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="promotionForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.name|crispy }}
+                            {{ form.discount_type|crispy }}
+                            {{ form.value|crispy }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.start_date|crispy }}
+                            {{ form.end_date|crispy }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            {{ form.products|crispy }}
+                            {{ form.categories|crispy }}
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Enregistrer
+                        </button>
+                        <a href="{% url 'inventory:promotion-list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialiser Select2 pour les champs de sélection multiple
+    $('#id_products, #id_categories').select2({
+        width: '100%',
+        placeholder: 'Sélectionner...',
+        allowClear: true
+    });
+
+    // Validation du formulaire
+    $('#promotionForm').submit(function(e) {
+        const startDate = new Date($('#id_start_date').val());
+        const endDate = new Date($('#id_end_date').val());
+
+        if (endDate < startDate) {
+            e.preventDefault();
+            alert('La date de fin doit être postérieure à la date de début');
+        }
+    });
+});
+</script>
+{% endblock %}
