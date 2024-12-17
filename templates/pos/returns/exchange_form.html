@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Échange d'article{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Échange d'article - Retour #{{ return_item.id }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <!-- Article retourné -->
+                    <div class="col-md-6">
+                        <h6>Article retourné</h6>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6>{{ return_item.product_variant.product.name }}</h6>
+                                <p class="mb-1">
+                                    <span class="color-dot" 
+                                          style="background-color: {{ return_item.product_variant.color.code }}"></span>
+                                    {{ return_item.product_variant.color.name }}
+                                </p>
+                                <p class="mb-1">Taille: {{ return_item.product_variant.size.name }}</p>
+                                <p class="mb-0">Prix: <span class="original-price">{{ return_item.product_variant.product.base_price }}</span> €</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nouvel article -->
+                    <div class="col-md-6">
+                        <h6>Nouvel article</h6>
+                        <form method="post" id="exchangeForm">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                {{ form.new_variant|as_crispy_field }}
+                            </div>
+
+                            <div id="priceInfo" class="alert alert-info d-none">
+                                <p class="mb-1">Prix du nouvel article: <span id="newPrice">0</span> €</p>
+                                <p class="mb-0">Différence à payer: <span id="priceDifference">0</span> €</p>
+                            </div>
+
+                            <div class="mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-exchange-alt"></i> Valider l'échange
+                                </button>
+                                <a href="{% url 'pos:return-detail' return_item.pk %}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Annuler
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.color-dot {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+#priceInfo {
+    transition: all 0.3s ease;
+}
+
+.price-difference-positive {
+    color: #dc3545;
+}
+
+.price-difference-negative {
+    color: #28a745;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const originalPrice = parseFloat($('.original-price').text());
+    const priceInfo = $('#priceInfo');
+    const newPriceSpan = $('#newPrice');
+    const priceDifferenceSpan = $('#priceDifference');
+
+    $('#id_new_variant').change(function() {
+        const selectedOption = $(this).find('option:selected');
+        if (selectedOption.val()) {
+            const newPrice = parseFloat(selectedOption.data('price'));
+            const difference = newPrice - originalPrice;
+
+            newPriceSpan.text(newPrice.toFixed(2));
+            priceDifferenceSpan.text(difference.toFixed(2));
+            
+            if (difference > 0) {
+                priceDifferenceSpan.removeClass('price-difference-negative').addClass('price-difference-positive');
+            } else if (difference < 0) {
+                priceDifferenceSpan.removeClass('price-difference-positive').addClass('price-difference-negative');
+            } else {
+                priceDifferenceSpan.removeClass('price-difference-positive price-difference-negative');
+            }
+
+            priceInfo.removeClass('d-none');
+        } else {
+            priceInfo.addClass('d-none');
+        }
+    });
+
+    // Validation du formulaire
+    $('#exchangeForm').submit(function(e) {
+        const selectedVariant = $('#id_new_variant').val();
+        if (!selectedVariant) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un article pour l\'échange');
+            return false;
+        }
+
+        const difference = parseFloat(priceDifferenceSpan.text());
+        if (difference > 0) {
+            return confirm(`Le client doit payer une différence de ${difference.toFixed(2)} €. Continuer?`);
+        }
+        return true;
+    });
+});
+</script>
+{% endblock %}
