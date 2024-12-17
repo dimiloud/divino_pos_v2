@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% block title %}Point de Vente{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+    .product-card {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .product-card:hover {
+        transform: scale(1.05);
+    }
+    .cart-item {
+        animation: fadeIn 0.3s;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Produits -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="mb-0">Produits</h5>
+                    </div>
+                    <div class="col-auto">
+                        <div class="input-group">
+                            <input type="text" id="search-product" class="form-control" 
+                                   placeholder="Rechercher un produit...">
+                            <button class="btn btn-outline-secondary" type="button" id="scan-barcode">
+                                <i class="fas fa-barcode"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Catégories -->
+                <div class="mb-3 d-flex flex-wrap gap-2">
+                    <button class="btn btn-outline-primary active" data-category="all">
+                        Tout
+                    </button>
+                    {% for category in categories %}
+                    <button class="btn btn-outline-primary" data-category="{{ category.id }}">
+                        {{ category.name }}
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <!-- Grille de produits -->
+                <div class="product-grid">
+                    {% for product in products %}
+                    <div class="card product-card" data-product-id="{{ product.id }}" 
+                         data-category="{{ product.category_id }}">
+                        <img src="{{ product.image.url|default:'https://via.placeholder.com/150' }}" 
+                             class="card-img-top" alt="{{ product.name }}">
+                        <div class="card-body p-2 text-center">
+                            <h6 class="card-title mb-1">{{ product.name }}</h6>
+                            <p class="card-text mb-0">{{ product.price }} €</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panier -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Panier</h5>
+            </div>
+            <div class="card-body">
+                <div id="cart-items">
+                    <!-- Les articles seront ajoutés ici dynamiquement -->
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Sous-total:</span>
+                    <span id="subtotal">0.00 €</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>TVA (20%):</span>
+                    <span id="tax">0.00 €</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <strong>Total:</strong>
+                    <strong id="total">0.00 €</strong>
+                </div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" id="checkout-btn">
+                        <i class="fas fa-cash-register"></i> Paiement
+                    </button>
+                    <button class="btn btn-danger" id="clear-cart-btn">
+                        <i class="fas fa-trash"></i> Vider le panier
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de paiement -->
+<div class="modal fade" id="payment-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Paiement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="payment-form">
+                    <div class="mb-3">
+                        <label class="form-label">Montant total</label>
+                        <input type="text" class="form-control" id="payment-amount" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mode de paiement</label>
+                        <select class="form-select" id="payment-method" required>
+                            <option value="cash">Espèces</option>
+                            <option value="card">Carte bancaire</option>
+                            <option value="transfer">Virement</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="cash-received-group" style="display: none;">
+                        <label class="form-label">Montant reçu</label>
+                        <input type="number" class="form-control" id="cash-received">
+                        <div class="form-text" id="change-amount"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="confirm-payment-btn">
+                    Confirmer le paiement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Le code JavaScript sera ajouté dans le prochain fichier
+</script>
+{% endblock %}
