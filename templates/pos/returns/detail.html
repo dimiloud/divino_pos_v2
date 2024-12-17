@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Détails du retour{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Détails du retour -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Retour #{{ return.id }} - {{ return.sale.reference }}</h5>
+                <span class="badge {% if return.status == 'pending' %}bg-warning
+                             {% elif return.status == 'approved' %}bg-success
+                             {% elif return.status == 'rejected' %}bg-danger
+                             {% else %}bg-secondary{% endif %}">
+                    {{ return.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Informations de l'article -->
+                    <div class="col-md-6">
+                        <h6>Article retourné</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Article</dt>
+                            <dd class="col-sm-8">{{ return.product_variant.product.name }}</dd>
+
+                            <dt class="col-sm-4">Taille</dt>
+                            <dd class="col-sm-8">{{ return.product_variant.size.name }}</dd>
+
+                            <dt class="col-sm-4">Couleur</dt>
+                            <dd class="col-sm-8">
+                                <span class="color-dot" style="background-color: {{ return.product_variant.color.code }}"></span>
+                                {{ return.product_variant.color.name }}
+                            </dd>
+
+                            <dt class="col-sm-4">Quantité</dt>
+                            <dd class="col-sm-8">{{ return.quantity }}</dd>
+
+                            <dt class="col-sm-4">Prix unitaire</dt>
+                            <dd class="col-sm-8">{{ return.product_variant.product.base_price }} €</dd>
+                        </dl>
+                    </div>
+
+                    <!-- Détails du retour -->
+                    <div class="col-md-6">
+                        <h6>Détails du retour</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Date demande</dt>
+                            <dd class="col-sm-8">{{ return.created_at|date:"d/m/Y H:i" }}</dd>
+
+                            <dt class="col-sm-4">Motif</dt>
+                            <dd class="col-sm-8">{{ return.get_reason_display }}</dd>
+
+                            {% if return.description %}
+                            <dt class="col-sm-4">Description</dt>
+                            <dd class="col-sm-8">{{ return.description }}</dd>
+                            {% endif %}
+
+                            {% if return.processed_by %}
+                            <dt class="col-sm-4">Traité par</dt>
+                            <dd class="col-sm-8">{{ return.processed_by.get_full_name }}</dd>
+
+                            <dt class="col-sm-4">Date traitement</dt>
+                            <dd class="col-sm-8">{{ return.processed_date|date:"d/m/Y H:i" }}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-4">
+                    {% if return.status == 'pending' %}
+                    <form method="post" class="d-inline-block">
+                        {% csrf_token %}
+                        <button type="submit" name="action" value="approve" class="btn btn-success">
+                            <i class="fas fa-check"></i> Approuver
+                        </button>
+                        <button type="submit" name="action" value="reject" class="btn btn-danger">
+                            <i class="fas fa-times"></i> Refuser
+                        </button>
+                    </form>
+                    {% elif return.status == 'approved' and not return.exchange %}
+                    <a href="{% url 'pos:exchange-create' return.pk %}" class="btn btn-primary">
+                        <i class="fas fa-exchange-alt"></i> Créer un échange
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if return.exchange %}
+        <!-- Détails de l'échange -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Échange associé</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Nouvel article</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Article</dt>
+                            <dd class="col-sm-8">{{ return.exchange.new_variant.product.name }}</dd>
+
+                            <dt class="col-sm-4">Taille</dt>
+                            <dd class="col-sm-8">{{ return.exchange.new_variant.size.name }}</dd>
+
+                            <dt class="col-sm-4">Couleur</dt>
+                            <dd class="col-sm-8">
+                                <span class="color-dot" style="background-color: {{ return.exchange.new_variant.color.code }}"></span>
+                                {{ return.exchange.new_variant.color.name }}
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Détails de l'échange</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Statut</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge {% if return.exchange.status == 'pending' %}bg-warning
+                                             {% elif return.exchange.status == 'completed' %}bg-success
+                                             {% else %}bg-secondary{% endif %}">
+                                    {{ return.exchange.get_status_display }}
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-4">Différence</dt>
+                            <dd class="col-sm-8">
+                                {% if return.exchange.price_difference > 0 %}
+                                <span class="text-danger">+{{ return.exchange.price_difference }} €</span>
+                                {% elif return.exchange.price_difference < 0 %}
+                                <span class="text-success">{{ return.exchange.price_difference }} €</span>
+                                {% else %}
+                                <span class="text-muted">Aucune</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Timeline -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Historique</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-heading">Demande de retour créée</div>
+                            <div class="timeline-body">{{ return.created_at|date:"d/m/Y H:i" }}</div>
+                        </div>
+                    </div>
+
+                    {% if return.processed_date %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if return.status == 'approved' %}bg-success{% else %}bg-danger{% endif %}"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-heading">
+                                {% if return.status == 'approved' %}Retour approuvé{% else %}Retour refusé{% endif %}
+                            </div>
+                            <div class="timeline-body">
+                                {{ return.processed_date|date:"d/m/Y H:i" }}
+                                <br>
+                                <small class="text-muted">Par {{ return.processed_by.get_full_name }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if return.exchange %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-heading">Échange créé</div>
+                            <div class="timeline-body">{{ return.exchange.created_at|date:"d/m/Y H:i" }}</div>
+                        </div>
+                    </div>
+
+                    {% if return.exchange.status == 'completed' %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-heading">Échange terminé</div>
+                            <div class="timeline-body">{{ return.exchange.processed_date|date:"d/m/Y H:i" }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.color-dot {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-item {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 15px;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    flex-grow: 1;
+}
+
+.timeline-heading {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+</style>
+{% endblock %}
