@@ -1,0 +1,149 @@
+[
+    {
+        "model": "pos.category",
+        "pk": 1,
+        "fields": {
+            "name": "Robes",
+            "description": "Robes pour femmes",
+            "active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "pos.category",
+        "pk": 2,
+        "fields": {
+            "name": "Pantalons",
+            "description": "Pantalons pour femmes",
+            "active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "pos.category",
+        "pk": 3,
+        "fields": {
+            "name": "Chemisiers",
+            "description": "Chemisiers et hauts",
+            "active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "inventory.size",
+        "pk": 1,
+        "fields": {
+            "name": "XS",
+            "description": "Extra Small",
+            "order": 1
+        }
+    },
+    {
+        "model": "inventory.size",
+        "pk": 2,
+        "fields": {
+            "name": "S",
+            "description": "Small",
+            "order": 2
+        }
+    },
+    {
+        "model": "inventory.size",
+        "pk": 3,
+        "fields": {
+            "name": "M",
+            "description": "Medium",
+            "order": 3
+        }
+    },
+    {
+        "model": "inventory.size",
+        "pk": 4,
+        "fields": {
+            "name": "L",
+            "description": "Large",
+            "order": 4
+        }
+    },
+    {
+        "model": "inventory.size",
+        "pk": 5,
+        "fields": {
+            "name": "XL",
+            "description": "Extra Large",
+            "order": 5
+        }
+    },
+    {
+        "model": "inventory.color",
+        "pk": 1,
+        "fields": {
+            "name": "Noir",
+            "code": "#000000"
+        }
+    },
+    {
+        "model": "inventory.color",
+        "pk": 2,
+        "fields": {
+            "name": "Blanc",
+            "code": "#FFFFFF"
+        }
+    },
+    {
+        "model": "inventory.color",
+        "pk": 3,
+        "fields": {
+            "name": "Bleu Marine",
+            "code": "#000080"
+        }
+    },
+    {
+        "model": "inventory.collection",
+        "pk": 1,
+        "fields": {
+            "name": "Printemps 2024",
+            "season": "spring",
+            "year": 2024,
+            "description": "Collection Printemps",
+            "start_date": "2024-03-01",
+            "end_date": "2024-05-31",
+            "active": true
+        }
+    },
+    {
+        "model": "inventory.product",
+        "pk": 1,
+        "fields": {
+            "name": "Robe élégante",
+            "reference": "ROBE-001",
+            "description": "Robe élégante pour soirée",
+            "category": 1,
+            "collection": 1,
+            "base_price": "89.99",
+            "tax_rate": "20.00",
+            "material": "95% Polyester, 5% Elasthane",
+            "care_instructions": "Lavage à 30°C",
+            "active": true
+        }
+    },
+    {
+        "model": "inventory.product",
+        "pk": 2,
+        "fields": {
+            "name": "Pantalon classique",
+            "reference": "PANT-001",
+            "description": "Pantalon classique coupe droite",
+            "category": 2,
+            "collection": 1,
+            "base_price": "59.99",
+            "tax_rate": "20.00",
+            "material": "98% Coton, 2% Elasthane",
+            "care_instructions": "Lavage à 30°C",
+            "active": true
+        }
+    }
+]
