@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestion des retours{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Retours et échanges</h5>
+    </div>
+    <div class="card-body">
+        <!-- Statistiques -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h6>En attente</h6>
+                        <h3>{{ status_counts.pending }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h6>Approuvés</h6>
+                        <h3>{{ status_counts.approved }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <h6>Refusés</h6>
+                        <h3>{{ status_counts.rejected }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <h6>Terminés</h6>
+                        <h3>{{ status_counts.completed }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="mb-4">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">Tous les statuts</option>
+                        {% for status, label in return_statuses %}
+                        <option value="{{ status }}" {% if request.GET.status == status %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <!-- Liste des retours -->
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Référence</th>
+                        <th>Article</th>
+                        <th>Client</th>
+                        <th>Date</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for return in returns %}
+                    <tr>
+                        <td>{{ return.sale.reference }}</td>
+                        <td>
+                            {{ return.product_variant.product.name }}
+                            <br>
+                            <small class="text-muted">
+                                {{ return.product_variant.size.name }} - 
+                                {{ return.product_variant.color.name }}
+                            </small>
+                        </td>
+                        <td>{{ return.sale.customer.get_full_name }}</td>
+                        <td>{{ return.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <span class="badge {% if return.status == 'pending' %}bg-warning
+                                         {% elif return.status == 'approved' %}bg-success
+                                         {% elif return.status == 'rejected' %}bg-danger
+                                         {% else %}bg-secondary{% endif %}">
+                                {{ return.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'pos:return-detail' return.pk %}" 
+                                   class="btn btn-info" title="Détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if return.status == 'pending' %}
+                                <a href="{% url 'pos:return-process' return.pk %}" 
+                                   class="btn btn-primary" title="Traiter">
+                                    <i class="fas fa-check"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">Aucun retour trouvé</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">&laquo; Premier</a>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" 
+                       href="?page={{ page_obj.paginator.num_pages }}">Dernier &raquo;</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
