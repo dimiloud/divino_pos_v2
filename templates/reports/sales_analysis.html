@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Analyse des ventes{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <!-- Filtres -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Période</label>
+                        <select name="period" class="form-select">
+                            <option value="7" {% if period == '7' %}selected{% endif %}>7 derniers jours</option>
+                            <option value="30" {% if period == '30' %}selected{% endif %}>30 derniers jours</option>
+                            <option value="90" {% if period == '90' %}selected{% endif %}>90 derniers jours</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Collection</label>
+                        <select name="collection" class="form-select">
+                            <option value="">Toutes les collections</option>
+                            {% for col in collections %}
+                            <option value="{{ col.id }}" {% if collection == col.id %}selected{% endif %}>
+                                {{ col.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Catégorie</label>
+                        <select name="category" class="form-select">
+                            <option value="">Toutes les catégories</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if category == cat.id %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter"></i> Filtrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Graphique des ventes -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Évolution des ventes</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="salesChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meilleures ventes -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Top articles</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for item in bestsellers %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ item.product__name }}</h6>
+                                <small class="text-muted">
+                                    {{ item.product_variant__size__name }} - 
+                                    {{ item.product_variant__color__name }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <div>{{ item.units_sold }} unités</div>
+                                <small class="text-success">{{ item.total_sales }} €</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Performance par taille -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Ventes par taille</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="sizeChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance par couleur -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Ventes par couleur</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="colorChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Données pour les graphiques
+const salesData = {{ sales_data|safe }};
+const sizeData = {{ size_data|safe }};
+const colorData = {{ color_data|safe }};
+
+// Graphique des ventes
+new Chart(document.getElementById('salesChart'), {
+    type: 'line',
+    data: {
+        labels: salesData.dates,
+        datasets: [{
+            label: 'Ventes (€)',
+            data: salesData.values,
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Graphique des tailles
+new Chart(document.getElementById('sizeChart'), {
+    type: 'bar',
+    data: {
+        labels: sizeData.labels,
+        datasets: [{
+            label: 'Unités vendues',
+            data: sizeData.values,
+            backgroundColor: 'rgb(54, 162, 235)'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Graphique des couleurs
+new Chart(document.getElementById('colorChart'), {
+    type: 'doughnut',
+    data: {
+        labels: colorData.labels,
+        datasets: [{
+            data: colorData.values,
+            backgroundColor: colorData.colors
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+</script>
+{% endblock %}
