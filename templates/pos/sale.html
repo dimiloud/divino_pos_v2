@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="grid grid-cols-12 gap-4">
+    <div class="col-span-8">
+        <div class="products-grid grid grid-cols-4 gap-4">
+            {% for product in products %}
+            <button class="product-item p-4 border rounded" 
+                    data-id="{{ product.id }}"
+                    data-price="{{ product.price }}">
+                <h3>{{ product.name }}</h3>
+                <p>{{ product.price }} €</p>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-span-4">
+        <div class="cart-items space-y-2">
+            <!-- Cart items go here -->
+        </div>
+        <div class="payment-methods mt-4">
+            <button class="btn-cash w-full py-2">Espèces</button>
+            <button class="btn-card w-full py-2 mt-2">Carte</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

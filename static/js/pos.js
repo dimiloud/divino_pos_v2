@@ -1,97 +1,75 @@
-class POS {
+class POSManager {
     constructor() {
-        this.cart = new Cart();
-        this.initEventListeners();
+        this.cart = new Map();
+        this.bindEvents();
     }
 
-    initEventListeners() {
-        // Recherche de produits
-        document.getElementById('search-product').addEventListener('input', (e) => {
-            this.filterProducts(e.target.value);
+    bindEvents() {
+        document.querySelectorAll('.product-item').forEach(btn => {
+            btn.addEventListener('click', () => this.addToCart(btn));
         });
 
-        // Filtrage par catégorie
-        document.querySelectorAll('[data-category]').forEach(button => {
-            button.addEventListener('click', (e) => {
-                this.filterByCategory(e.target.dataset.category);
+        document.querySelector('.btn-cash').addEventListener('click', () => {
+            this.processSale('CASH');
+        });
+
+        document.querySelector('.btn-card').addEventListener('click', () => {
+            this.processSale('CARD');
+        });
+    }
+
+    addToCart(productBtn) {
+        const id = productBtn.dataset.id;
+        const price = parseFloat(productBtn.dataset.price);
+        const name = productBtn.querySelector('h3').textContent;
+
+        if (this.cart.has(id)) {
+            const item = this.cart.get(id);
+            item.quantity += 1;
+        } else {
+            this.cart.set(id, {
+                id,
+                name,
+                price,
+                quantity: 1
             });
-        });
-
-        // Ajout de produits au panier
-        document.querySelectorAll('.product-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                const productId = card.dataset.productId;
-                this.addToCart(productId);
-            });
-        });
-
-        // Gestion du paiement
-        document.getElementById('checkout-btn').addEventListener('click', () => {
-            this.showPaymentModal();
-        });
-
-        // Vider le panier
-        document.getElementById('clear-cart-btn').addEventListener('click', () => {
-            this.cart.clear();
-        });
-
-        // Validation du paiement
-        document.getElementById('confirm-payment-btn').addEventListener('click', () => {
-            this.processPayment();
-        });
-    }
-
-    async addToCart(productId) {
-        try {
-            const response = await fetch(`/api/products/${productId}/`);
-            const product = await response.json();
-            this.cart.addItem(product);
-        } catch (error) {
-            console.error('Erreur lors de l\'ajout au panier:', error);
-        }
-    }
-
-    filterProducts(searchTerm) {
-        const products = document.querySelectorAll('.product-card');
-        products.forEach(product => {
-            const name = product.querySelector('.card-title').textContent.toLowerCase();
-            const show = name.includes(searchTerm.toLowerCase());
-            product.style.display = show ? '' : 'none';
-        });
-    }
-
-    filterByCategory(categoryId) {
-        const products = document.querySelectorAll('.product-card');
-        products.forEach(product => {
-            if (categoryId === 'all' || product.dataset.category === categoryId) {
-                product.style.display = '';
-            } else {
-                product.style.display = 'none';
-            }
-        });
-    }
-
-    showPaymentModal() {
-        if (this.cart.total <= 0) {
-            alert('Le panier est vide');
-            return;
         }
 
-        const modal = new bootstrap.Modal(document.getElementById('payment-modal'));
-        document.getElementById('payment-amount').value = `${this.cart.total.toFixed(2)} €`;
-        modal.show();
+        this.updateCartDisplay();
     }
 
-    async processPayment() {
-        const paymentMethod = document.getElementById('payment-method').value;
+    updateCartDisplay() {
+        const cartDiv = document.querySelector('.cart-items');
+        cartDiv.innerHTML = '';
+        let total = 0;
+
+        for (let item of this.cart.values()) {
+            const itemTotal = item.price * item.quantity;
+            total += itemTotal;
+
+            cartDiv.innerHTML += `
+                <div class="cart-item flex justify-between p-2 border-b">
+                    <span>${item.name} x${item.quantity}</span>
+                    <span>${itemTotal.toFixed(2)} €</span>
+                </div>
+            `;
+        }
+
+        cartDiv.innerHTML += `
+            <div class="total font-bold mt-4 text-xl">
+                Total: ${total.toFixed(2)} €
+            </div>
+        `;
+    }
+
+    async processSale(paymentMethod) {
         const saleData = {
-            items: this.cart.items.map(item => ({
-                product: item.id,
+            payment_method: paymentMethod,
+            items: Array.from(this.cart.values()).map(item => ({
+                product_id: item.id,
                 quantity: item.quantity,
                 unit_price: item.price
-            })),
-            payment_method: paymentMethod,
-            total_amount: this.cart.total
+            }))
         };
 
         try {
@@ -99,51 +77,24 @@ class POS {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCSRFToken()
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 },
                 body: JSON.stringify(saleData)
             });
 
             if (response.ok) {
-                const sale = await response.json();
                 this.cart.clear();
-                bootstrap.Modal.getInstance(document.getElementById('payment-modal')).hide();
-                this.showSuccessMessage('Vente enregistrée avec succès');
+                this.updateCartDisplay();
+                alert('Vente effectuée avec succès!');
             } else {
-                throw new Error('Erreur lors du traitement du paiement');
+                throw new Error('Erreur lors de la vente');
             }
         } catch (error) {
-            console.error('Erreur:', error);
-            this.showErrorMessage('Erreur lors du traitement du paiement');
+            alert('Erreur: ' + error.message);
         }
-    }
-
-    getCSRFToken() {
-        return document.querySelector('[name=csrfmiddlewaretoken]').value;
-    }
-
-    showSuccessMessage(message) {
-        const alert = document.createElement('div');
-        alert.className = 'alert alert-success alert-dismissible fade show';
-        alert.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        document.querySelector('.container-fluid').prepend(alert);
-    }
-
-    showErrorMessage(message) {
-        const alert = document.createElement('div');
-        alert.className = 'alert alert-danger alert-dismissible fade show';
-        alert.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        document.querySelector('.container-fluid').prepend(alert);
     }
 }
 
-// Initialisation du POS
 document.addEventListener('DOMContentLoaded', () => {
-    new POS();
+    new POSManager();
 });
