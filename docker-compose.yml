@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   web:
     build: .
@@ -12,6 +10,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
       - DEBUG=True
       - SECRET_KEY=your-secret-key-here
       - DB_NAME=divino_pos
