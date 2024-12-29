@@ -1,6 +1,15 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
+from apps.inventory.models import Product
+
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return self.name
 
 class Sale(models.Model):
     PAYMENT_METHODS = [
