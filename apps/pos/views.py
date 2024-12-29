@@ -1,76 +1,43 @@
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib import messages
+import csv
+import io
 from apps.inventory.models import Product, Category
 from .models import Sale
 
-def pos_interface(request):
-    products = Product.objects.filter(active=True)
-    categories = Category.objects.filter(active=True)
+@login_required
+def import_products(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        csv_file = request.FILES['file'].read().decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_file))
+        
+        success_count = 0
+        error_count = 0
+        
+        for row in csv_reader:
+            try:
+                category, _ = Category.objects.get_or_create(
+                    name=row.get('category', 'Autre')
+                )
+                
+                Product.objects.create(
+                    name=row['name'],
+                    category=category,
+                    price=float(row['price']),
+                    stock_quantity=int(row.get('stock_quantity', 0)),
+                    active=True
+                )
+                success_count += 1
+            except Exception as e:
+                error_count += 1
+        
+        if success_count:
+            messages.success(request, f'{success_count} produits importés avec succès')
+        if error_count:
+            messages.error(request, f'{error_count} erreurs lors de l\'importation')
     
-    context = {
-        'products': products,
-        'categories': categories,
-    }
-    return render(request, 'pos/pos_interface.html', context)
-
-class ProductListView(LoginRequiredMixin, ListView):
-    model = Product
-    template_name = 'pos/product_list.html'
-    context_object_name = 'products'
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        category = self.request.GET.get('category')
-        search = self.request.GET.get('search')
-
-        if category:
-            queryset = queryset.filter(category__id=category)
-        if search:
-            queryset = queryset.filter(name__icontains=search)
-
-        return queryset.filter(active=True)
-
-class ProductCreateView(LoginRequiredMixin, CreateView):
-    model = Product
-    template_name = 'pos/product_form.html'
-    fields = ['name', 'category', 'price', 'stock_quantity', 'active']
-    success_url = reverse_lazy('pos:product-list')
-
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, 'Produit créé avec succès')
-        return response
-
-class SaleCreateView(LoginRequiredMixin, CreateView):
-    model = Sale
-    template_name = 'pos/sale_form.html'
-    fields = ['payment_method', 'notes']
-    success_url = reverse_lazy('pos:sale-list')
-
-    def form_valid(self, form):
-        form.instance.cashier = self.request.user
-        form.instance.reference = Sale.generate_reference()
-        response = super().form_valid(form)
-        messages.success(self.request, 'Vente enregistrée avec succès')
-        return response
-
-class SaleListView(LoginRequiredMixin, ListView):
-    model = Sale
-    template_name = 'pos/sale_list.html'
-    context_object_name = 'sales'
-    paginate_by = 20
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        date_from = self.request.GET.get('date_from')
-        date_to = self.request.GET.get('date_to')
-
-        if date_from:
-            queryset = queryset.filter(created_at__gte=date_from)
-        if date_to:
-            queryset = queryset.filter(created_at__lte=date_to)
-
-        return queryset.order_by('-created_at')
+    return redirect('pos:product-list')
