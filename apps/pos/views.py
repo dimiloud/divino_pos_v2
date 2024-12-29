@@ -1,10 +1,20 @@
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.contrib import messages
-from .models import Sale, Product, Category
-from decimal import Decimal
+from apps.inventory.models import Product, Category
+from .models import Sale
+
+def pos_interface(request):
+    products = Product.objects.filter(active=True)
+    categories = Category.objects.filter(active=True)
+    
+    context = {
+        'products': products,
+        'categories': categories,
+    }
+    return render(request, 'pos/pos_interface.html', context)
 
 class ProductListView(LoginRequiredMixin, ListView):
     model = Product
@@ -53,13 +63,3 @@ class SaleListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(created_at__lte=date_to)
 
         return queryset.order_by('-created_at')
-
-def pos_interface(request):
-    products = Product.objects.filter(active=True)
-    categories = Category.objects.filter(active=True)
-    
-    context = {
-        'products': products,
-        'categories': categories,
-    }
-    return render(request, 'pos/pos_interface.html', context)
