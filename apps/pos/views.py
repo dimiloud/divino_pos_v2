@@ -33,6 +33,17 @@ class ProductListView(LoginRequiredMixin, ListView):
 
         return queryset.filter(active=True)
 
+class ProductCreateView(LoginRequiredMixin, CreateView):
+    model = Product
+    template_name = 'pos/product_form.html'
+    fields = ['name', 'category', 'price', 'stock_quantity', 'active']
+    success_url = reverse_lazy('pos:product-list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, 'Produit créé avec succès')
+        return response
+
 class SaleCreateView(LoginRequiredMixin, CreateView):
     model = Sale
     template_name = 'pos/sale_form.html'
