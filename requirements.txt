@@ -1,14 +1,24 @@
-Django==5.1.4
+Django==5.1.1
+psycopg2-binary==2.9.9
 django-environ==0.11.2
 django-crispy-forms==2.1
 django-redis==5.4.0
 djangorestframework==3.14.0
-psycopg2-binary==2.9.9
 drf-spectacular==0.27.0
+django-cors-headers==4.3.1
+django-filter==23.5
+Pillow==11.0.0
+
+# Cache et sessions
+redis==5.0.1
+hiredis==2.3.2
 
 # Serveur et déploiement
 gunicorn==21.2.0
 whitenoise==6.6.0
+dj-static==0.1.2
+boto3==1.34.7
+django-storages==1.14.2
 
 # Tests et qualité de code
 pytest==7.4.3
@@ -20,7 +30,3 @@ isort==5.12.0
 # Monitoring et logging
 sentry-sdk==1.38.0
 django-debug-toolbar==4.2.0
-
-# Sécurité
-django-cors-headers==4.3.1
-Pillow==11.0.0
