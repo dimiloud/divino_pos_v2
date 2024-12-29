@@ -4,8 +4,6 @@ services:
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
     ports:
       - "8000:8000"
     environment:
@@ -16,13 +14,10 @@ services:
       - DB_PASSWORD=postgres
       - DB_HOST=db
       - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/1
       - DEBUG=True
       - ALLOWED_HOSTS=localhost,127.0.0.1
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
 
   db:
@@ -39,20 +34,5 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
 volumes:
   postgres_data:
-  redis_data:
-  static_volume:
-  media_volume:
