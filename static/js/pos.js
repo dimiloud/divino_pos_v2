@@ -1,149 +1,215 @@
-class POS {
+class POSManager {
     constructor() {
-        this.cart = new Cart();
-        this.initEventListeners();
+        this.cart = new Map();
+        this.bindEvents();
+        this.initializeWebSocket();
     }
 
-    initEventListeners() {
-        // Recherche de produits
-        document.getElementById('search-product').addEventListener('input', (e) => {
+    bindEvents() {
+        // Événements des produits
+        document.querySelectorAll('.product-item').forEach(btn => {
+            btn.addEventListener('click', () => this.addToCart(btn));
+        });
+
+        // Filtres
+        document.getElementById('searchInput').addEventListener('input', (e) => {
             this.filterProducts(e.target.value);
         });
 
-        // Filtrage par catégorie
-        document.querySelectorAll('[data-category]').forEach(button => {
-            button.addEventListener('click', (e) => {
-                this.filterByCategory(e.target.dataset.category);
+        document.getElementById('categoryFilter').addEventListener('change', (e) => {
+            this.filterByCategory(e.target.value);
+        });
+
+        // Paiement
+        document.querySelectorAll('[data-payment]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const method = btn.dataset.payment;
+                this.processSale(method);
             });
-        });
-
-        // Ajout de produits au panier
-        document.querySelectorAll('.product-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                const productId = card.dataset.productId;
-                this.addToCart(productId);
-            });
-        });
-
-        // Gestion du paiement
-        document.getElementById('checkout-btn').addEventListener('click', () => {
-            this.showPaymentModal();
-        });
-
-        // Vider le panier
-        document.getElementById('clear-cart-btn').addEventListener('click', () => {
-            this.cart.clear();
-        });
-
-        // Validation du paiement
-        document.getElementById('confirm-payment-btn').addEventListener('click', () => {
-            this.processPayment();
         });
     }
 
-    async addToCart(productId) {
+    initializeWebSocket() {
+        this.ws = new WebSocket(`ws://${window.location.host}/ws/pos/`);
+        
+        this.ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'stock_update') {
+                this.updateProductStock(data.product_id, data.new_stock);
+            }
+        };
+
+        this.ws.onclose = () => {
+            console.log('WebSocket connection closed');
+            // Tentative de reconnexion
+            setTimeout(() => this.initializeWebSocket(), 5000);
+        };
+    }
+
+    addToCart(productBtn) {
+        const id = productBtn.dataset.id;
+        const stock = parseInt(productBtn.dataset.stock);
+
+        if (stock <= 0) {
+            toastr.error('Produit en rupture de stock');
+            return;
+        }
+
+        const currentItem = this.cart.get(id);
+        if (currentItem && currentItem.quantity >= stock) {
+            toastr.warning('Stock insuffisant');
+            return;
+        }
+
+        const price = parseFloat(productBtn.dataset.price);
+        const name = productBtn.dataset.name;
+
+        if (this.cart.has(id)) {
+            const item = this.cart.get(id);
+            item.quantity += 1;
+        } else {
+            this.cart.set(id, {
+                id,
+                name,
+                price,
+                quantity: 1
+            });
+        }
+
+        this.updateCartDisplay();
+    }
+
+    updateCartDisplay() {
+        const cartDiv = document.getElementById('cart-items');
+        cartDiv.innerHTML = '';
+        let total = 0;
+
+        for (let [id, item] of this.cart) {
+            const itemTotal = item.price * item.quantity;
+            total += itemTotal;
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'cart-item d-flex justify-content-between align-items-center p-2 border-bottom';
+            itemDiv.innerHTML = `
+                <div>
+                    <span class="fw-bold">${item.name}</span><br>
+                    <small class="text-muted">${item.price.toFixed(2)} € x ${item.quantity}</small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-3">${itemTotal.toFixed(2)} €</span>
+                    <button class="btn btn-sm btn-outline-danger" onclick="pos.removeFromCart('${id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            cartDiv.appendChild(itemDiv);
+        }
+
+        document.getElementById('cart-total').textContent = `${total.toFixed(2)} €`;
+        this.updatePaymentButtons(total > 0);
+    }
+
+    removeFromCart(productId) {
+        this.cart.delete(productId);
+        this.updateCartDisplay();
+    }
+
+    updatePaymentButtons(enabled) {
+        document.querySelectorAll('[data-payment]').forEach(btn => {
+            btn.disabled = !enabled;
+        });
+    }
+
+    async processSale(paymentMethod) {
         try {
-            const response = await fetch(`/api/products/${productId}/`);
-            const product = await response.json();
-            this.cart.addItem(product);
+            const formData = new FormData();
+            formData.append('payment_method', paymentMethod);
+            
+            const items = [];
+            for (let [id, item] of this.cart) {
+                items.push({
+                    id: item.id,
+                    quantity: item.quantity
+                });
+            }
+            formData.append('products', JSON.stringify(items));
+
+            const response = await fetch('/api/pos/process-sale/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                toastr.success('Vente effectuée avec succès');
+                this.cart.clear();
+                this.updateCartDisplay();
+                this.printReceipt(data.sale_id);
+            } else {
+                throw new Error(data.error || 'Erreur lors de la vente');
+            }
+
         } catch (error) {
-            console.error('Erreur lors de l\'ajout au panier:', error);
+            toastr.error(error.message);
+            console.error('Erreur:', error);
         }
     }
 
-    filterProducts(searchTerm) {
-        const products = document.querySelectorAll('.product-card');
-        products.forEach(product => {
-            const name = product.querySelector('.card-title').textContent.toLowerCase();
-            const show = name.includes(searchTerm.toLowerCase());
-            product.style.display = show ? '' : 'none';
+    filterProducts(search) {
+        const searchLower = search.toLowerCase();
+        document.querySelectorAll('.product-item').forEach(item => {
+            const name = item.dataset.name.toLowerCase();
+            const visible = name.includes(searchLower);
+            item.style.display = visible ? '' : 'none';
         });
     }
 
     filterByCategory(categoryId) {
-        const products = document.querySelectorAll('.product-card');
-        products.forEach(product => {
-            if (categoryId === 'all' || product.dataset.category === categoryId) {
-                product.style.display = '';
+        document.querySelectorAll('.product-item').forEach(item => {
+            if (!categoryId || item.dataset.category === categoryId) {
+                item.style.display = '';
             } else {
-                product.style.display = 'none';
+                item.style.display = 'none';
             }
         });
     }
 
-    showPaymentModal() {
-        if (this.cart.total <= 0) {
-            alert('Le panier est vide');
-            return;
-        }
-
-        const modal = new bootstrap.Modal(document.getElementById('payment-modal'));
-        document.getElementById('payment-amount').value = `${this.cart.total.toFixed(2)} €`;
-        modal.show();
-    }
-
-    async processPayment() {
-        const paymentMethod = document.getElementById('payment-method').value;
-        const saleData = {
-            items: this.cart.items.map(item => ({
-                product: item.id,
-                quantity: item.quantity,
-                unit_price: item.price
-            })),
-            payment_method: paymentMethod,
-            total_amount: this.cart.total
-        };
-
-        try {
-            const response = await fetch('/api/sales/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCSRFToken()
-                },
-                body: JSON.stringify(saleData)
-            });
-
-            if (response.ok) {
-                const sale = await response.json();
-                this.cart.clear();
-                bootstrap.Modal.getInstance(document.getElementById('payment-modal')).hide();
-                this.showSuccessMessage('Vente enregistrée avec succès');
-            } else {
-                throw new Error('Erreur lors du traitement du paiement');
+    updateProductStock(productId, newStock) {
+        const productBtn = document.querySelector(`[data-id="${productId}"]`);
+        if (productBtn) {
+            productBtn.dataset.stock = newStock;
+            const stockSpan = productBtn.querySelector('.stock-qty');
+            if (stockSpan) {
+                stockSpan.textContent = newStock;
             }
-        } catch (error) {
-            console.error('Erreur:', error);
-            this.showErrorMessage('Erreur lors du traitement du paiement');
+            if (newStock <= 0) {
+                productBtn.classList.add('out-of-stock');
+            }
         }
     }
 
-    getCSRFToken() {
-        return document.querySelector('[name=csrfmiddlewaretoken]').value;
-    }
-
-    showSuccessMessage(message) {
-        const alert = document.createElement('div');
-        alert.className = 'alert alert-success alert-dismissible fade show';
-        alert.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        document.querySelector('.container-fluid').prepend(alert);
-    }
-
-    showErrorMessage(message) {
-        const alert = document.createElement('div');
-        alert.className = 'alert alert-danger alert-dismissible fade show';
-        alert.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        document.querySelector('.container-fluid').prepend(alert);
+    async printReceipt(saleId) {
+        try {
+            const response = await fetch(`/api/pos/receipt/${saleId}/`);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const printWindow = window.open(url);
+            printWindow.onload = () => {
+                printWindow.print();
+                window.URL.revokeObjectURL(url);
+            };
+        } catch (error) {
+            console.error('Erreur d\'impression:', error);
+            toastr.error('Erreur lors de l\'impression du ticket');
+        }
     }
 }
 
-// Initialisation du POS
+// Initialisation
 document.addEventListener('DOMContentLoaded', () => {
-    new POS();
+    window.pos = new POSManager();
 });
