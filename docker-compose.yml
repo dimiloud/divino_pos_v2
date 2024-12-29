@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - DJANGO_SETTINGS_MODULE=config.settings
       - SECRET_KEY=your-secret-key-here
       - DB_NAME=divino_pos
       - DB_USER=postgres
